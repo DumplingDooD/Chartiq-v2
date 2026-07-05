@@ -386,9 +386,40 @@
     );
   }
 
-  function LearnScreen({ parts, partIndex, onNextPart }) {
+  const MODULE_DISPLAY_OVERRIDES = {
+    support_resistance: "Support & Resistance",
+    macd: "MACD",
+    rsi: "RSI",
+  };
+
+  function getModuleDisplayName(moduleKey) {
+    if (MODULE_DISPLAY_OVERRIDES[moduleKey]) {
+      return MODULE_DISPLAY_OVERRIDES[moduleKey];
+    }
+
+    return moduleKey
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+
+  function ModuleListScreen({ moduleNames, onSelectModule }) {
+    return (
+      <section style={styles.placeholderScreen}>
+        <h1 style={styles.screenTitle}>Learn</h1>
+        {moduleNames.map((moduleName) => (
+          <button key={moduleName} type="button" onClick={() => onSelectModule(moduleName)} style={styles.primaryButton}>
+            {getModuleDisplayName(moduleName)}
+          </button>
+        ))}
+      </section>
+    );
+  }
+
+  function LearnScreen({ parts, partIndex, onNextPart, onBackToModules }) {
     const part = parts[partIndex];
-    const moduleName = part ? part.module || "Module" : parts[0].module || "Module";
+    const rawModuleName = part ? part.module || "Module" : parts[0]?.module || "Module";
+    const moduleName = getModuleDisplayName(rawModuleName);
     const earnedTokens = parts.length * 10;
 
     if (!parts.length) {
@@ -401,12 +432,18 @@
           <p style={styles.homeLeo}>🦕</p>
           <h1 style={styles.screenTitle}>{moduleName} done.</h1>
           <p style={styles.bodyText}>You earned {earnedTokens} tokens.</p>
+          <button type="button" onClick={onBackToModules} style={styles.primaryButton}>
+            Back to modules
+          </button>
         </section>
       );
     }
 
     return (
       <section style={styles.learnScreen}>
+        <button type="button" onClick={onBackToModules} style={styles.smallButton}>
+          Back to modules
+        </button>
         <p style={styles.progressText}>
           Part {partIndex + 1} of {parts.length}
         </p>
@@ -461,20 +498,25 @@
   function App() {
     const lessons = getLessons();
     const parts = useMemo(() => normalizeParts(lessons), [lessons]);
+    const moduleNames = useMemo(() => [...new Set(parts.map((part) => part.module))], [parts]);
     const [activeTab, setActiveTab] = useState("Home");
     const [partIndex, setPartIndex] = useState(0);
+    const [selectedModule, setSelectedModule] = useState(null);
     const showDevBar = isLocalDevelopment();
 
+    const selectedParts = useMemo(() => parts.filter((part) => part.module === selectedModule), [parts, selectedModule]);
+
     useEffect(() => {
-      setPartIndex((currentIndex) => Math.min(currentIndex, parts.length));
-    }, [parts.length]);
+      setPartIndex((currentIndex) => Math.min(currentIndex, selectedParts.length));
+    }, [selectedParts.length]);
 
     function goNextPart() {
-      setPartIndex((currentIndex) => Math.min(currentIndex + 1, parts.length));
+      setPartIndex((currentIndex) => Math.min(currentIndex + 1, selectedParts.length));
     }
 
     function resetProgress() {
       setPartIndex(0);
+      setSelectedModule(null);
       setActiveTab("Learn");
     }
 
@@ -489,7 +531,26 @@
       }
 
       if (activeTab === "Learn") {
-        return <LearnScreen parts={parts} partIndex={partIndex} onNextPart={goNextPart} />;
+        if (!selectedModule) {
+          return (
+            <ModuleListScreen
+              moduleNames={moduleNames}
+              onSelectModule={(name) => {
+                setSelectedModule(name);
+                setPartIndex(0);
+              }}
+            />
+          );
+        }
+
+        return (
+          <LearnScreen
+            parts={selectedParts}
+            partIndex={partIndex}
+            onNextPart={goNextPart}
+            onBackToModules={() => setSelectedModule(null)}
+          />
+        );
       }
 
       if (activeTab === "Trade") {
@@ -808,7 +869,7 @@
     learnScreen: {
       minHeight: 0,
       display: "grid",
-      gridTemplateRows: "auto 1fr",
+      gridTemplateRows: "auto auto 1fr",
       gap: "8px",
       overflow: "hidden",
     },

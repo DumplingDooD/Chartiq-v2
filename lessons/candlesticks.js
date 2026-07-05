@@ -1,4 +1,5 @@
-window.ChartiqLessons = [
+window.ChartiqLessons = window.ChartiqLessons || [];
+window.ChartiqLessons.push(
   {
     module: "candlesticks",
     part: 1,
@@ -26,5 +27,5 @@ window.ChartiqLessons = [
       tip:
         "Watch for a long upper wick on a red candle. It often means buyers tried to push the price up but sellers pushed it straight back down.",
     },
-  },
-];
+  }
+);

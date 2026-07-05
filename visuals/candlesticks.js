@@ -166,8 +166,9 @@ function CandleBearVisual() {
   return <CandleSignalVisual color="#ef5350" bodyTop={0.42} bodyBottom={0.64} wickTop={0.08} wickBottom={0.72} />;
 }
 
-window.VisualRegistry = {
+window.VisualRegistry = window.VisualRegistry || {};
+Object.assign(window.VisualRegistry, {
   candle_intro: CandleIntroVisual,
   candle_bull: CandleBullVisual,
   candle_bear: CandleBearVisual,
-};
+});
