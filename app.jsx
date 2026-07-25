@@ -300,7 +300,7 @@
 
     return (
       <PartShell canGoNext={canGoNext} nextUnlocked={feedback === "correct"} onNext={onNext}>
-        <VisualFrame visualKey={part.visualKey} part={part} state="spot" />
+        <VisualFrame visualKey={part.visualKey} part={part} state={selectedIndex !== null ? "revealed" : "spot"} />
         <p style={styles.question}>{part.question || ""}</p>
         <section style={styles.answerStack}>
           {answers.slice(0, 3).map((answer, index) => {

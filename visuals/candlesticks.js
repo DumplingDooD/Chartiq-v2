@@ -112,6 +112,26 @@ function CandleIntroVisual() {
   return <canvas ref={canvasRef} style={{ width: "100%", height: "260px", display: "block" }} />;
 }
 
+function drawOhlcCandle(ctx, candle, bounds) {
+  const priceRange = Math.max(bounds.maxPrice - bounds.minPrice, Number.EPSILON);
+  const projectY = (price) =>
+    bounds.bottom - ((price - bounds.minPrice) / priceRange) * (bounds.bottom - bounds.top);
+  const centerX = (bounds.left + bounds.right) / 2;
+  const bodyTop = projectY(Math.max(candle.open, candle.close));
+  const bodyBottom = projectY(Math.min(candle.open, candle.close));
+  const bodyHeight = Math.max(bounds.minimumBodyHeight || 0, bodyBottom - bodyTop);
+  const color = candle.close > candle.open ? "#26a69a" : "#ef5350";
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = bounds.wickWidth;
+  ctx.beginPath();
+  ctx.moveTo(centerX, projectY(candle.high));
+  ctx.lineTo(centerX, projectY(candle.low));
+  ctx.stroke();
+  ctx.fillRect(bounds.left, bodyTop, bounds.right - bounds.left, bodyHeight);
+}
+
 function CandleSignalVisual({ color, bodyTop, bodyBottom, wickTop, wickBottom }) {
   const canvasRef = React.useRef(null);
 
@@ -133,20 +153,25 @@ function CandleSignalVisual({ color, bodyTop, bodyBottom, wickTop, wickBottom })
       ctx.fillRect(0, 0, rect.width, rect.height);
 
       const centerX = rect.width * 0.5;
-      const yTop = rect.height * bodyTop;
-      const yBottom = rect.height * bodyBottom;
-      const highY = rect.height * wickTop;
-      const lowY = rect.height * wickBottom;
       const bodyWidth = Math.max(58, rect.width * 0.24);
+      const isBull = color === "#26a69a";
+      const candle = {
+        open: 1 - (isBull ? bodyBottom : bodyTop),
+        high: 1 - wickTop,
+        low: 1 - wickBottom,
+        close: 1 - (isBull ? bodyTop : bodyBottom),
+      };
 
-      ctx.strokeStyle = color;
-      ctx.fillStyle = color;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(centerX, highY);
-      ctx.lineTo(centerX, lowY);
-      ctx.stroke();
-      ctx.fillRect(centerX - bodyWidth / 2, yTop, bodyWidth, yBottom - yTop);
+      drawOhlcCandle(ctx, candle, {
+        left: centerX - bodyWidth / 2,
+        right: centerX + bodyWidth / 2,
+        top: 0,
+        bottom: rect.height,
+        minPrice: 0,
+        maxPrice: 1,
+        wickWidth: 4,
+        minimumBodyHeight: 0,
+      });
     }
 
     draw();
@@ -166,9 +191,137 @@ function CandleBearVisual() {
   return <CandleSignalVisual color="#ef5350" bodyTop={0.42} bodyBottom={0.64} wickTop={0.08} wickBottom={0.72} />;
 }
 
+function CandleStrip({ part, state }) {
+  const canvasRef = React.useRef(null);
+  const chartData = part && part.chartData ? part.chartData : {};
+  const context = Array.isArray(chartData.context) ? chartData.context : [];
+  const continuation = Array.isArray(chartData.continuation) ? chartData.continuation : [];
+  const target = chartData.target || null;
+  const isRevealed = state === "revealed";
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !target) {
+      return undefined;
+    }
+
+    function draw() {
+      const rect = canvas.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 1;
+      canvas.width = rect.width * scale;
+      canvas.height = rect.height * scale;
+
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      ctx.fillStyle = "#131722";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+      const candles = context.concat(target, isRevealed ? continuation : []);
+      const validCandles = candles.filter((candle) =>
+        ["open", "high", "low", "close"].every((field) => Number.isFinite(Number(candle[field])))
+      );
+      if (!validCandles.length) {
+        return;
+      }
+
+      const rawMin = Math.min(...validCandles.map((candle) => Number(candle.low)));
+      const rawMax = Math.max(...validCandles.map((candle) => Number(candle.high)));
+      const rawRange = Math.max(rawMax - rawMin, Number.EPSILON);
+      const minPrice = rawMin - rawRange * 0.06;
+      const maxPrice = rawMax + rawRange * 0.06;
+      const horizontalPadding = 8;
+      const verticalPadding = 10;
+      const stripWidth = Math.max(1, rect.width - horizontalPadding * 2);
+      const pitch = stripWidth / validCandles.length;
+      const bodyWidth = Math.max(2, Math.min(12, pitch * 0.55));
+      const targetIndex = Math.min(context.length, validCandles.length - 1);
+      const targetCenterX = horizontalPadding + pitch * (targetIndex + 0.5);
+
+      ctx.save();
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = "#d1d4dc";
+      ctx.fillRect(
+        targetCenterX - pitch * 0.45,
+        verticalPadding,
+        pitch * 0.9,
+        Math.max(1, rect.height - verticalPadding * 2)
+      );
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = "#d1d4dc";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(
+        targetCenterX - pitch * 0.45 + 0.5,
+        verticalPadding + 0.5,
+        Math.max(1, pitch * 0.9 - 1),
+        Math.max(1, rect.height - verticalPadding * 2 - 1)
+      );
+      ctx.restore();
+
+      validCandles.forEach((candle, index) => {
+        const centerX = horizontalPadding + pitch * (index + 0.5);
+        drawOhlcCandle(
+          ctx,
+          {
+            open: Number(candle.open),
+            high: Number(candle.high),
+            low: Number(candle.low),
+            close: Number(candle.close),
+          },
+          {
+            left: centerX - bodyWidth / 2,
+            right: centerX + bodyWidth / 2,
+            top: verticalPadding,
+            bottom: rect.height - verticalPadding,
+            minPrice,
+            maxPrice,
+            wickWidth: 1.5,
+            minimumBodyHeight: 1,
+          }
+        );
+      });
+    }
+
+    draw();
+    window.addEventListener("resize", draw);
+
+    return () => window.removeEventListener("resize", draw);
+  }, [context, continuation, isRevealed, target]);
+
+  return (
+    <section
+      style={{
+        width: "100%",
+        height: "100%",
+        minHeight: 0,
+        display: "grid",
+        gridTemplateRows: isRevealed ? "1fr auto" : "1fr",
+        gap: isRevealed ? "4px" : 0,
+        padding: "8px",
+        background: "#131722",
+      }}
+    >
+      <canvas ref={canvasRef} style={{ width: "100%", height: "100%", minHeight: 0, display: "block" }} />
+      {isRevealed ? (
+        <p
+          style={{
+            margin: 0,
+            color: "#d1d4dc",
+            fontSize: "13px",
+            lineHeight: 1.2,
+            textAlign: "center",
+          }}
+        >
+          {chartData.ticker || ""} {target.date || ""}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 window.VisualRegistry = window.VisualRegistry || {};
 Object.assign(window.VisualRegistry, {
   candle_intro: CandleIntroVisual,
   candle_bull: CandleBullVisual,
   candle_bear: CandleBearVisual,
+  candle_strip: CandleStrip,
 });
