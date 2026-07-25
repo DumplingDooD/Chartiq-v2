@@ -132,6 +132,20 @@ function drawOhlcCandle(ctx, candle, bounds) {
   ctx.fillRect(bounds.left, bodyTop, bounds.right - bounds.left, bodyHeight);
 }
 
+function drawCandleVolumeBar(ctx, candle, bounds) {
+  if (!Number.isFinite(candle.volume) || candle.volume < 0 || bounds.maxVolume <= 0) {
+    return;
+  }
+
+  const height = (candle.volume / bounds.maxVolume) * (bounds.bottom - bounds.top);
+  const color = candle.close > candle.open ? "#26a69a" : "#ef5350";
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = color;
+  ctx.fillRect(bounds.left, bounds.bottom - height, bounds.right - bounds.left, height);
+  ctx.restore();
+}
+
 function CandleSignalVisual({ color, bodyTop, bodyBottom, wickTop, wickBottom }) {
   const canvasRef = React.useRef(null);
 
@@ -197,11 +211,24 @@ function CandleStrip({ part, state }) {
   const context = Array.isArray(chartData.context) ? chartData.context : [];
   const continuation = Array.isArray(chartData.continuation) ? chartData.continuation : [];
   const target = chartData.target || null;
+  const run = Array.isArray(chartData.run) ? chartData.run : [];
+  const focusCandles = target ? [target] : run;
+  const allExerciseCandles = context.concat(focusCandles, continuation);
+  const hasVolumeData = allExerciseCandles.some((candle) =>
+    Number.isFinite(Number(candle.volume))
+  );
+  const maxVolume = hasVolumeData
+    ? Math.max(
+        ...allExerciseCandles
+          .filter((candle) => Number.isFinite(Number(candle.volume)))
+          .map((candle) => Number(candle.volume))
+      )
+    : 0;
   const isRevealed = state === "revealed";
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !target) {
+    if (!canvas || !focusCandles.length) {
       return undefined;
     }
 
@@ -216,7 +243,7 @@ function CandleStrip({ part, state }) {
       ctx.fillStyle = "#131722";
       ctx.fillRect(0, 0, rect.width, rect.height);
 
-      const candles = context.concat(target, isRevealed ? continuation : []);
+      const candles = context.concat(focusCandles, isRevealed ? continuation : []);
       const validCandles = candles.filter((candle) =>
         ["open", "high", "low", "close"].every((field) => Number.isFinite(Number(candle[field])))
       );
@@ -231,28 +258,33 @@ function CandleStrip({ part, state }) {
       const maxPrice = rawMax + rawRange * 0.06;
       const horizontalPadding = 8;
       const verticalPadding = 10;
+      const candleBottom = hasVolumeData ? rect.height * 0.7 : rect.height - verticalPadding;
+      const volumeTop = rect.height * 0.76;
+      const volumeBottom = rect.height - verticalPadding;
       const stripWidth = Math.max(1, rect.width - horizontalPadding * 2);
       const pitch = stripWidth / validCandles.length;
       const bodyWidth = Math.max(2, Math.min(12, pitch * 0.55));
-      const targetIndex = Math.min(context.length, validCandles.length - 1);
-      const targetCenterX = horizontalPadding + pitch * (targetIndex + 0.5);
+      const focusStartIndex = Math.min(context.length, validCandles.length - 1);
+      const focusLength = Math.max(1, Math.min(focusCandles.length, validCandles.length - focusStartIndex));
+      const focusStartX = horizontalPadding + pitch * (focusStartIndex + 0.05);
+      const focusWidth = pitch * (focusLength - 0.1);
 
       ctx.save();
       ctx.globalAlpha = 0.16;
       ctx.fillStyle = "#d1d4dc";
       ctx.fillRect(
-        targetCenterX - pitch * 0.45,
+        focusStartX,
         verticalPadding,
-        pitch * 0.9,
+        focusWidth,
         Math.max(1, rect.height - verticalPadding * 2)
       );
       ctx.globalAlpha = 0.55;
       ctx.strokeStyle = "#d1d4dc";
       ctx.lineWidth = 1;
       ctx.strokeRect(
-        targetCenterX - pitch * 0.45 + 0.5,
+        focusStartX + 0.5,
         verticalPadding + 0.5,
-        Math.max(1, pitch * 0.9 - 1),
+        Math.max(1, focusWidth - 1),
         Math.max(1, rect.height - verticalPadding * 2 - 1)
       );
       ctx.restore();
@@ -271,13 +303,31 @@ function CandleStrip({ part, state }) {
             left: centerX - bodyWidth / 2,
             right: centerX + bodyWidth / 2,
             top: verticalPadding,
-            bottom: rect.height - verticalPadding,
+            bottom: candleBottom,
             minPrice,
             maxPrice,
             wickWidth: 1.5,
             minimumBodyHeight: 1,
           }
         );
+
+        if (hasVolumeData) {
+          drawCandleVolumeBar(
+            ctx,
+            {
+              open: Number(candle.open),
+              close: Number(candle.close),
+              volume: Number(candle.volume),
+            },
+            {
+              left: centerX - bodyWidth / 2,
+              right: centerX + bodyWidth / 2,
+              top: volumeTop,
+              bottom: volumeBottom,
+              maxVolume,
+            }
+          );
+        }
       });
     }
 
@@ -285,7 +335,13 @@ function CandleStrip({ part, state }) {
     window.addEventListener("resize", draw);
 
     return () => window.removeEventListener("resize", draw);
-  }, [context, continuation, isRevealed, target]);
+  }, [context, continuation, hasVolumeData, isRevealed, maxVolume, run, target]);
+
+  const captionDate = target
+    ? target.date || ""
+    : run.length
+      ? `${run[0].date || ""} – ${run[run.length - 1].date || ""}`
+      : "";
 
   return (
     <section
@@ -294,15 +350,16 @@ function CandleStrip({ part, state }) {
         height: "100%",
         minHeight: 0,
         display: "grid",
-        gridTemplateRows: isRevealed ? "1fr auto" : "1fr",
-        gap: isRevealed ? "4px" : 0,
+        gridTemplateRows: isRevealed || hasVolumeData ? "1fr auto" : "1fr",
+        gap: isRevealed || hasVolumeData ? "4px" : 0,
         padding: "8px",
         background: "#131722",
       }}
     >
       <canvas ref={canvasRef} style={{ width: "100%", height: "100%", minHeight: 0, display: "block" }} />
-      {isRevealed ? (
+      {isRevealed || hasVolumeData ? (
         <p
+          aria-hidden={!isRevealed}
           style={{
             margin: 0,
             color: "#d1d4dc",
@@ -311,7 +368,7 @@ function CandleStrip({ part, state }) {
             textAlign: "center",
           }}
         >
-          {chartData.ticker || ""} {target.date || ""}
+          {isRevealed ? `${chartData.ticker || ""} ${captionDate}` : "\u00a0"}
         </p>
       ) : null}
     </section>
