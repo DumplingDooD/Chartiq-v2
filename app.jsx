@@ -5,6 +5,10 @@
     return Array.isArray(window.ChartiqLessons) ? window.ChartiqLessons : [];
   }
 
+  function getExercises() {
+    return Array.isArray(window.ChartiqExercises) ? window.ChartiqExercises : [];
+  }
+
   function getVisualRegistry() {
     return window.VisualRegistry || {};
   }
@@ -452,11 +456,90 @@
     );
   }
 
-  function TabBar({ activeTab, onTabChange }) {
-    const tabs = ["Home", "Learn", "Trade", "Profile"];
+  function shuffleExercises(exercises) {
+    const shuffled = exercises.slice();
+
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+    }
+
+    return shuffled;
+  }
+
+  function DojoScreen() {
+    const exercises = getExercises();
+    const moduleNames = useMemo(() => [...new Set(exercises.map((exercise) => exercise.module).filter(Boolean))], [exercises]);
+    const [selectedModule, setSelectedModule] = useState(null);
+    const [session, setSession] = useState([]);
+    const [exerciseIndex, setExerciseIndex] = useState(0);
+
+    function startSession(moduleName) {
+      const moduleExercises = exercises.filter((exercise) => exercise.module === moduleName);
+      setSelectedModule(moduleName);
+      setSession(shuffleExercises(moduleExercises).slice(0, 10));
+      setExerciseIndex(0);
+    }
+
+    function backToModules() {
+      setSelectedModule(null);
+      setSession([]);
+      setExerciseIndex(0);
+    }
+
+    if (!selectedModule) {
+      return (
+        <section style={styles.placeholderScreen}>
+          <h1 style={styles.screenTitle}>Dojo</h1>
+          {moduleNames.map((moduleName) => (
+            <button key={moduleName} type="button" onClick={() => startSession(moduleName)} style={styles.primaryButton}>
+              {getModuleDisplayName(moduleName)}
+            </button>
+          ))}
+        </section>
+      );
+    }
+
+    if (exerciseIndex >= session.length) {
+      return (
+        <section style={styles.completionCard}>
+          <p style={styles.homeLeo}>🦕</p>
+          <h1 style={styles.screenTitle}>Dojo session complete</h1>
+          <button type="button" onClick={() => startSession(selectedModule)} style={styles.primaryButton}>
+            Practice again
+          </button>
+          <button type="button" onClick={backToModules} style={styles.primaryButton}>
+            Back to modules
+          </button>
+        </section>
+      );
+    }
+
+    const exercise = session[exerciseIndex];
 
     return (
-      <nav style={styles.tabBar} aria-label="Main tabs">
+      <section style={styles.learnScreen}>
+        <button type="button" onClick={backToModules} style={styles.smallButton}>
+          Back to modules
+        </button>
+        <p style={styles.progressText}>
+          Exercise {exerciseIndex + 1} of {session.length}
+        </p>
+        <PartScreen
+          key={`${selectedModule}-${exerciseIndex}`}
+          part={exercise}
+          canGoNext={true}
+          onNext={() => setExerciseIndex((currentIndex) => Math.min(currentIndex + 1, session.length))}
+        />
+      </section>
+    );
+  }
+
+  function TabBar({ activeTab, onTabChange }) {
+    const tabs = ["Home", "Learn", "Trade", "Dojo", "Profile"];
+
+    return (
+      <nav style={{ ...styles.tabBar, ...styles.fiveTabBar }} aria-label="Main tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -551,6 +634,10 @@
             onBackToModules={() => setSelectedModule(null)}
           />
         );
+      }
+
+      if (activeTab === "Dojo") {
+        return <DojoScreen />;
       }
 
       if (activeTab === "Trade") {
@@ -930,6 +1017,9 @@
       borderTop: "1px solid #E5E0DB",
       padding: "8px 0 0",
       background: "#FFFFFF",
+    },
+    fiveTabBar: {
+      gridTemplateColumns: "repeat(5, 1fr)",
     },
     tabButton: {
       minWidth: 0,
