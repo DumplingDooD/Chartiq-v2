@@ -132,6 +132,8 @@ function drawOhlcCandle(ctx, candle, bounds) {
   ctx.fillRect(bounds.left, bodyTop, bounds.right - bounds.left, bodyHeight);
 }
 
+window.ChartiqDrawOhlcCandle = window.ChartiqDrawOhlcCandle || drawOhlcCandle;
+
 function drawCandleVolumeBar(ctx, candle, bounds) {
   if (!Number.isFinite(candle.volume) || candle.volume < 0 || bounds.maxVolume <= 0) {
     return;
