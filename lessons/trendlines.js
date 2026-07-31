@@ -11,38 +11,49 @@ window.ChartiqLessons.push(
   module: "trendlines",
   part: 1,
   type: "whatitis",
-  heading: "Trendline",
+  heading: "What it is",
   explanation:
-    "Every candle has a top point and a bottom point. The top is called the high, the bottom is called the low. A trendline is just a straight line drawn connecting several of those points across a few candles in a row.\n\nIf you connect the low points and each one sits a bit higher than the last, you've drawn a line that follows price upward. If you connect the high points and each one sits a bit lower than the last, you've drawn a line that follows price downward. Look at the picture below, the line is drawn along the bottom of each candle, and each bottom sits a little higher than the one before it.",
+    "A trendline is a straight line connecting a few swing points along the price line. It lets you see the general direction at a glance.",
   simplified:
-    "Think of a trendline like the handrail on a staircase. Going up, the handrail rises step by step. If you keep your hand near it, you're following the stairs up. If you suddenly step away and fall, the staircase pattern has broken.",
+    "You are joining a few meaningful highs or lows so the bigger direction is easier to see.",
   visualKey: "trendline_intro",
 },
 {
   module: "trendlines",
   part: 2,
   type: "whatitis",
-  heading: "Uptrend lines sit below price",
+  heading: "You draw it yourself",
   explanation:
-    "An uptrend line connects the low points of several candles, where each low sits a bit higher than the one before. The line sits underneath price, acting like a floor. Candles rest above the line, dip down to touch it, then bounce back up. As long as price stays above the line, buyers are still in control.",
+    "Unlike the price line or volume, a trendline does not appear automatically. You choose the points and draw it, so two people can draw slightly different lines on the same chart. That is normal, not a mistake.",
   simplified:
-    "It's like a trampoline. Price falls toward the line, the line pushes it back up, and the bounce continues the climb.",
-  visualKey: "trendline_bull",
+    "It is a guide you add to the chart, not a fixed answer the chart gives you.",
+  visualKey: "trendline_intro",
 },
 {
   module: "trendlines",
   part: 3,
   type: "whatitis",
-  heading: "Downtrend lines sit above price",
+  heading: "Uptrend line",
   explanation:
-    "A downtrend line connects the high points of several candles, where each high sits a bit lower than the one before. The line sits above price, acting like a ceiling. Candles rest below the line, rise up to touch it, then get pushed back down. As long as price stays under the line, sellers are still in control.",
+    "An uptrend line connects rising lows and sits like a floor under price. While price stays above it, buyers are still in control.",
   simplified:
-    "It's like a low ceiling in a room. Price jumps up toward it, knocks its head, and drops back down.",
-  visualKey: "trendline_bear",
+    "Price can dip toward the line, then bounce and keep climbing.",
+  visualKey: "trendline_bull",
 },
 {
   module: "trendlines",
   part: 4,
+  type: "whatitis",
+  heading: "Downtrend line",
+  explanation:
+    "A downtrend line connects falling highs and sits like a ceiling above price. While price stays below it, sellers are still in control.",
+  simplified:
+    "Price can push up toward the line, get turned away, and keep falling.",
+  visualKey: "trendline_bear",
+},
+{
+  module: "trendlines",
+  part: 5,
   type: "signals",
   bull: {
     heading: "Bullish signal",

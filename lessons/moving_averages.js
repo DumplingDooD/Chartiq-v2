@@ -1,7 +1,7 @@
 // This is the full content for a NEW file: lessons/moving_averages.js
 // Follows the exact pattern lessons/support_resistance.js uses to push into window.ChartiqLessons.
 // Requires visuals/moving_averages.js to exist (registers ma_intro,
-// ma_bull, ma_bear into window.VisualRegistry).
+// ma_ema_compare, ma_bull, ma_bear into window.VisualRegistry).
 // Also requires a new script tag in index.html for lessons/moving_averages.js,
 // loaded after visuals/moving_averages.js and before app.jsx.
 // Note: "moving_averages" needs no display-name override, the generic
@@ -24,6 +24,17 @@ window.ChartiqLessons.push(
   module: "moving_averages",
   part: 2,
   type: "whatitis",
+  heading: "Two flavors: SMA vs EMA",
+  explanation:
+    "Two lines, two speeds. The grey line is the SMA — it treats the last 15 closes equally, so it moves smoothly but takes its time to react. The orange line is the EMA — it leans harder on the newest closes, so it moves first.\n\nLook at the big green candle on the right. The orange line jumps straight away. The grey line follows a few days later. Same move, two different speeds.\n\nYou'll see this exact trick again in MACD — a fast average racing ahead of a slower one.",
+  simplified:
+    "Think of two friends hearing the same news. The orange one reacts straight away. The grey one takes a few days to believe it and catch up.",
+  visualKey: "ma_ema_compare",
+},
+{
+  module: "moving_averages",
+  part: 3,
+  type: "whatitis",
   heading: "Above the average is bullish",
   explanation:
     "When price trades above its moving average, buyers are in control on average. Remember support from earlier? The average line often acts the same way, price dips toward it and bounces. The difference is this floor isn't fixed, it rises and falls along with the market.\n\nCheat to remember it: above the line means strength.",
@@ -33,7 +44,7 @@ window.ChartiqLessons.push(
 },
 {
   module: "moving_averages",
-  part: 3,
+  part: 4,
   type: "whatitis",
   heading: "Below the average is bearish",
   explanation:
@@ -44,7 +55,7 @@ window.ChartiqLessons.push(
 },
 {
   module: "moving_averages",
-  part: 4,
+  part: 5,
   type: "signals",
   bull: {
     heading: "Bullish signal",
